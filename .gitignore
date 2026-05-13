@@ -1,0 +1,7 @@
+# Build / terminal
+*.ex5
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
