@@ -51,4 +51,27 @@ inline int Aec_BarsAvailable(const string sym, const ENUM_TIMEFRAMES tf)
    return Bars(sym, tf);
   }
 
+// Broker hour window [start, end). Supports wrap e.g. start=22 end=6.
+inline int Aec_SpreadPoints(const string sym)
+  {
+   const double pt = Aec_PointSize(sym);
+   if(pt <= 0.0)
+      return 0;
+   const double bid = SymbolInfoDouble(sym, SYMBOL_BID);
+   const double ask = SymbolInfoDouble(sym, SYMBOL_ASK);
+   return (int)MathRound((ask - bid) / pt);
+  }
+
+inline bool Aec_BrokerHourInWindow(const datetime bar_time, const int start_h, const int end_h)
+  {
+   MqlDateTime dt;
+   TimeToStruct(bar_time, dt);
+   const int hr = dt.hour;
+   if(start_h == end_h)
+      return true;
+   if(start_h < end_h)
+      return (hr >= start_h && hr < end_h);
+   return (hr >= start_h || hr < end_h);
+  }
+
 #endif // AEC_HELPERS_MQH

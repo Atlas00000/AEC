@@ -1,4 +1,4 @@
-﻿{
+{
   "platform"    :"mt5",
   "program_type":"expert",
   "copyright"   :"Copyright 2026, MetaQuotes Ltd.",
@@ -61,6 +61,21 @@
     },
     {
       "path":"Utils\\CsvLog.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Utils\\SignalDiagnostics.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Utils\\DealExport.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Utils\\MaeMfeTracker.mqh",
       "compile":false,
       "relative_to_project":true
     },
@@ -161,6 +176,61 @@
     },
     {
       "path":"Signals\\SessionBreakout.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Signals\\HtfTrend.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Signals\\AdxRegime.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Signals\\AtrRegime.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Signals\\HourDirection.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Execution\\DeadTradeExit.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Execution\\GiveBackExit.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Execution\\NeverGreenSoftExit.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Execution\\PositionHelpers.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Execution\\BreakevenExit.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Execution\\PartialCloseExit.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Execution\\AtrTrailExit.mqh",
       "compile":false,
       "relative_to_project":true
     }

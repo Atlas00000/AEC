@@ -88,6 +88,114 @@ private:
       CLogger::Info(StringFormat("Opened ticket=%I64u", m_trade.ResultOrder()));
       return true;
      }
+
+public:
+   bool ClosePosition(const ulong ticket, string &reason)
+     {
+      Configure();
+      if(ticket == 0 || !PositionSelectByTicket(ticket))
+        {
+         reason = "position not found";
+         return false;
+        }
+      if(!m_trade.PositionClose(ticket))
+        {
+         reason = StringFormat("Close failed retcode=%u %s",
+                               m_trade.ResultRetcode(), m_trade.ResultComment());
+         return false;
+        }
+      CLogger::Info(StringFormat("Closed ticket=%I64u", ticket));
+      return true;
+     }
+
+   bool ModifyPositionSl(const ulong ticket, const double new_sl, string &reason)
+     {
+      Configure();
+      if(ticket == 0 || !PositionSelectByTicket(ticket))
+        {
+         reason = "position not found";
+         return false;
+        }
+
+      const string sym = PositionGetString(POSITION_SYMBOL);
+      const double tp = PositionGetDouble(POSITION_TP);
+      const int dg = (int)SymbolInfoInteger(sym, SYMBOL_DIGITS);
+      const double sl_norm = NormalizeDouble(new_sl, dg);
+
+      if(!m_trade.PositionModify(ticket, sl_norm, tp))
+        {
+         reason = StringFormat("Modify SL failed retcode=%u %s",
+                               m_trade.ResultRetcode(), m_trade.ResultComment());
+         return false;
+        }
+      return true;
+     }
+
+   bool ModifySlToBreakeven(const ulong ticket, string &reason)
+     {
+      if(ticket == 0 || !PositionSelectByTicket(ticket))
+        {
+         reason = "position not found";
+         return false;
+        }
+
+      const string sym = PositionGetString(POSITION_SYMBOL);
+      const long pos_type = PositionGetInteger(POSITION_TYPE);
+      const double entry = PositionGetDouble(POSITION_PRICE_OPEN);
+      const double bid = SymbolInfoDouble(sym, SYMBOL_BID);
+      const double ask = SymbolInfoDouble(sym, SYMBOL_ASK);
+      const double pt = SymbolInfoDouble(sym, SYMBOL_POINT);
+      const int stops_lvl = (int)SymbolInfoInteger(sym, SYMBOL_TRADE_STOPS_LEVEL);
+      const double min_dist = (double)MathMax(stops_lvl, 1) * pt;
+
+      double new_sl = entry;
+      if(pos_type == POSITION_TYPE_BUY)
+        {
+         const double cap = bid - min_dist;
+         if(new_sl > cap)
+            new_sl = cap;
+        }
+      else if(pos_type == POSITION_TYPE_SELL)
+        {
+         const double cap = ask + min_dist;
+         if(new_sl < cap)
+            new_sl = cap;
+        }
+      else
+        {
+         reason = "unknown position type";
+         return false;
+        }
+
+      if(!ModifyPositionSl(ticket, new_sl, reason))
+         return false;
+
+      CLogger::Info(StringFormat("SL -> BE ticket=%I64u sl=%.5f", ticket, new_sl));
+      return true;
+     }
+
+   bool PartialCloseVolume(const ulong ticket, const double close_volume, string &reason)
+     {
+      Configure();
+      if(ticket == 0 || !PositionSelectByTicket(ticket))
+        {
+         reason = "position not found";
+         return false;
+        }
+      if(close_volume <= 0.0)
+        {
+         reason = "close volume <= 0";
+         return false;
+        }
+      if(!m_trade.PositionClosePartial(ticket, close_volume))
+        {
+         reason = StringFormat("Partial close failed retcode=%u %s",
+                               m_trade.ResultRetcode(), m_trade.ResultComment());
+         return false;
+        }
+      CLogger::Info(StringFormat("Partial close ticket=%I64u vol=%.5f", ticket, close_volume));
+      return true;
+     }
   };
 
 #endif // AEC_TRADE_EXECUTOR_MQH

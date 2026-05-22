@@ -3,7 +3,7 @@
 //|                        Price Action Account Flipping Engine (P1) |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2026"
-#property version   "1.00"
+#property version   "1.01"
 
 #include "Core/Engine.mqh"
 
@@ -33,6 +33,13 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
                         const MqlTradeResult &result)
   {
    Engine_OnTradeTransaction(trans);
+  }
+
+//+------------------------------------------------------------------+
+double OnTester()
+  {
+   Engine_OnTesterEnd();
+   return 0.0;
   }
 
 //+------------------------------------------------------------------+

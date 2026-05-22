@@ -12,13 +12,23 @@
 #include "../Utils/Logger.mqh"
 #include "../Utils/GlobalsPersist.mqh"
 #include "../Utils/CsvLog.mqh"
+#include "../Utils/SignalDiagnostics.mqh"
+#include "../Utils/MaeMfeTracker.mqh"
+#include "../Utils/DealExport.mqh"
 #include "StateMachine.mqh"
 #include "../Risk/RiskManager.mqh"
 #include "../Risk/PositionSizing.mqh"
 #include "../Execution/TradeTracker.mqh"
 #include "../Execution/OrderValidator.mqh"
 #include "../Execution/TradeExecutor.mqh"
+#include "../Execution/DeadTradeExit.mqh"
+#include "../Execution/GiveBackExit.mqh"
+#include "../Execution/NeverGreenSoftExit.mqh"
+#include "../Execution/BreakevenExit.mqh"
+#include "../Execution/PartialCloseExit.mqh"
+#include "../Execution/AtrTrailExit.mqh"
 #include "../Signals/SignalEngine.mqh"
+#include "../Signals/HourDirection.mqh"
 
 class CEngine
   {
@@ -27,16 +37,55 @@ class CEngine
    CRiskManager     m_risk;
    CSignalEngine    m_sig;
    CTradeExecutor   m_exec;
+   CSignalDiagnostics m_diag;
    datetime         m_lastBarOpen;
    int              m_blockReason; // 0 none, 1 daily DD, 2 hard equity, 3 min equity
    int              m_blockedDayId;
    bool             m_loggedAtrTrailStub;
 
-   void SetCooldownFromNow()
+   void SetCooldownFromNow(const int seconds_override = -1)
      {
-      const datetime until = TimeCurrent() + (datetime)InpCooldownSecondsAfterTrade;
+      const int secs = (seconds_override > 0 ? seconds_override : InpCooldownSecondsAfterTrade);
+      const datetime until = TimeCurrent() + (datetime)secs;
       m_gv.SetTime("CD_UNTIL", until);
-      CLogger::Debug(StringFormat("Cooldown until %s", TimeToString(until, TIME_DATE | TIME_SECONDS)));
+      CLogger::Debug(StringFormat("Cooldown %ds until %s", secs,
+                                  TimeToString(until, TIME_DATE | TIME_SECONDS)));
+     }
+
+   int ConsecutiveLossStreak() const
+     {
+      return (int)m_gv.GetInt("LOSS_STREAK", 0);
+     }
+
+   void SetConsecutiveLossStreak(const int n) const
+     {
+      m_gv.SetInt("LOSS_STREAK", (long)MathMax(0, n));
+     }
+
+   void OnExitDealProfit(const double profit)
+     {
+      if(InpCooldownAfterLossOnly && profit < 0.0)
+         SetCooldownFromNow();
+
+      if(!InpUsePostStreakGate)
+         return;
+
+      if(profit >= 0.0)
+        {
+         if(ConsecutiveLossStreak() > 0)
+            SetConsecutiveLossStreak(0);
+         return;
+        }
+
+      const int next = ConsecutiveLossStreak() + 1;
+      SetConsecutiveLossStreak(next);
+      if(next < InpPostStreakLossCount)
+         return;
+
+      SetCooldownFromNow(InpPostStreakPauseSeconds);
+      SetConsecutiveLossStreak(0);
+      CLogger::Info(StringFormat("Post-streak gate: %d consecutive losses — pause %ds",
+                                 InpPostStreakLossCount, InpPostStreakPauseSeconds));
      }
 
    bool InCooldown() const
@@ -150,19 +199,35 @@ public:
       m_risk.OnInitDayAnchor();
       if(!m_sig.Init(_Symbol, _Period))
          return false;
+      m_diag.Reset();
+      if(InpDiagSignalLegs)
+         CLogger::Info("Phase 0 diagnostics ON — leg summary at deinit (see journal + AEC_diag_summary.csv)");
       if(!CCsvLog::Init())
          CLogger::Error("CSV log init failed — continuing without CSV");
-      if(InpUseExperimentalAtrTrail && !m_loggedAtrTrailStub)
+      if(InpExportDeals || AecExportMaeMfeActive())
+         CDealExport::Reset();
+      if(InpUseExperimentalAtrTrail && !InpUseAtrTrailAfterR && !m_loggedAtrTrailStub)
         {
-         CLogger::Info("Experimental ATR trail input is ON — Phase 1 has no trail logic (stub only).");
+         CLogger::Info("InpUseExperimentalAtrTrail is legacy — use InpUseAtrTrailAfterR (EDGE-6.6).");
          m_loggedAtrTrailStub = true;
         }
-      CLogger::Info(StringFormat("AEC init symbol=%s tf=%d allow=%s", _Symbol, (int)_Period, InpAllowTrading ? "true" : "false"));
+      CLogger::Info(StringFormat("AEC v1.01 P5-F production (T48) symbol=%s tf=%d allow=%s buyBlock=[%d,%d) diag=%s export=%s",
+                                 _Symbol, (int)_Period,
+                                 InpAllowTrading ? "true" : "false",
+                                 InpBlockBuyHourStart, InpBlockBuyHourEnd,
+                                 InpDiagSignalLegs ? "on" : "off",
+                                 InpExportDeals ? "on" : "off"));
       return true;
      }
 
    void Deinit(const int reason)
      {
+      if(InpDiagSignalLegs)
+        {
+         m_diag.LogSummary();
+         m_diag.WriteCsvSummary();
+        }
+      CDealExport::ExportOnDeinit(_Symbol, InpMagic);
       m_sig.Deinit();
       CCsvLog::Shutdown();
       CLogger::Info(StringFormat("AEC deinit reason=%d", reason));
@@ -182,19 +247,41 @@ public:
       if((long)HistoryDealGetInteger(deal, DEAL_MAGIC) != InpMagic)
          return;
       const long entry = HistoryDealGetInteger(deal, DEAL_ENTRY);
+      CMaeMfeTracker::OnDeal(deal, _Symbol, InpMagic);
       if(entry != DEAL_ENTRY_OUT)
          return;
       const double profit = HistoryDealGetDouble(deal, DEAL_PROFIT)
                             + HistoryDealGetDouble(deal, DEAL_SWAP)
                             + HistoryDealGetDouble(deal, DEAL_COMMISSION);
-      if(InpCooldownAfterLossOnly && profit < 0.0)
-         SetCooldownFromNow();
+      OnExitDealProfit(profit);
+      CDealExport::RecordCloseDeal(deal, _Symbol, InpMagic);
+     }
+
+   void OnTesterEnd()
+     {
+      CDealExport::ExportOnTester(_Symbol, InpMagic);
+      CDealExport::FlushMaeMfeOnly(_Symbol, InpMagic);
      }
 
    void OnTick()
      {
       m_risk.UpdateDayRollover();
       TryResetDailyBlock();
+
+      const double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      const double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      CMaeMfeTracker::OnTick(_Symbol, InpMagic, bid, ask);
+      const bool is_new_bar = Aec_IsNewBar(_Symbol, _Period, m_lastBarOpen);
+
+      if(m_sm.State() != STATE_BLOCKED)
+        {
+         Aec_DeadTradeManageTick(_Symbol, _Period, InpMagic, bid, ask, is_new_bar, m_gv, m_exec);
+         Aec_GiveBackManageTick(_Symbol, _Period, InpMagic, bid, ask, is_new_bar, m_gv, m_exec);
+         Aec_NeverGreenSoftManageTick(_Symbol, _Period, InpMagic, bid, ask, is_new_bar, m_gv, m_exec);
+         Aec_BreakevenManageTick(_Symbol, InpMagic, bid, ask, m_gv, m_exec);
+         Aec_PartialCloseManageTick(_Symbol, InpMagic, bid, ask, m_gv, m_exec);
+         Aec_AtrTrailManageTick(_Symbol, InpMagic, m_sig.AtrHandle(), bid, ask, m_gv, m_exec);
+        }
 
       if(m_sm.State() == STATE_BLOCKED)
         {
@@ -205,10 +292,7 @@ public:
       if(InCooldown())
          return;
 
-      const double point = Aec_PointSize(_Symbol);
-      const double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-      const double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-      const int spread_pts = (point > 0.0) ? (int)MathRound((ask - bid) / point) : 0;
+      const int spread_pts = Aec_SpreadPoints(_Symbol);
       if(spread_pts > InpMaxSpreadPoints)
         {
          CLogger::Trace(StringFormat("Skip tick: spread_pts=%d max=%d", spread_pts, InpMaxSpreadPoints));
@@ -218,8 +302,45 @@ public:
       if(!InpAllowTrading)
          return;
 
-      if(!Aec_IsNewBar(_Symbol, _Period, m_lastBarOpen))
+      if(!is_new_bar)
          return;
+
+      if(InpUseTradingHours || InpUseHourExclusion)
+        {
+         const datetime signal_bar_time = iTime(_Symbol, _Period, 1);
+         if(signal_bar_time == 0)
+            return;
+         if(InpUseTradingHours)
+           {
+            if(!Aec_BrokerHourInWindow(signal_bar_time, InpTradingHourStart, InpTradingHourEnd))
+              {
+               MqlDateTime dt;
+               TimeToStruct(signal_bar_time, dt);
+               CLogger::Trace(StringFormat("Skip bar: broker hour %d outside [%d,%d)",
+                                           dt.hour, InpTradingHourStart, InpTradingHourEnd));
+               return;
+              }
+           }
+         if(InpUseHourExclusion)
+           {
+            if(Aec_BrokerHourInWindow(signal_bar_time, InpExcludeHourStart, InpExcludeHourEnd))
+              {
+               MqlDateTime dt;
+               TimeToStruct(signal_bar_time, dt);
+               CLogger::Trace(StringFormat("Skip bar: broker hour %d in excluded [%d,%d)",
+                                           dt.hour, InpExcludeHourStart, InpExcludeHourEnd));
+               return;
+              }
+           }
+        }
+
+      if(InpDiagSignalLegs)
+        {
+         SignalLegSnapshot legs;
+         string ld = "";
+         if(m_sig.SnapshotLegs(_Symbol, _Period, legs, ld))
+            m_diag.RecordBar(legs);
+        }
 
       string rsk = "";
       if(!m_risk.DailyDrawdownOk(rsk))
@@ -261,14 +382,33 @@ public:
          return;
         }
 
+      CLogger::Debug(StringFormat("Signal %s | %s", sig.reason, sig.detail));
+
       if(InpTradeDirection > 0 && sig.direction != DIR_BUY)
          return;
       if(InpTradeDirection < 0 && sig.direction != DIR_SELL)
          return;
 
+      if(InpUseHourDirectionFilter)
+        {
+         const datetime signal_bar_time = iTime(_Symbol, _Period, 1);
+         string hdir = "";
+         if(!Aec_HourDirectionAllows(sig.direction, signal_bar_time, hdir))
+           {
+            CLogger::Trace(hdir);
+            return;
+           }
+        }
+
       if(!CTradeTracker::HasRoomForNew(_Symbol, InpMagic, (int)sig.direction, rsk))
         {
          CLogger::Info(rsk);
+         return;
+        }
+
+      if(!m_risk.MaxTradesPerDayOk(rsk))
+        {
+         CLogger::Trace(rsk);
          return;
         }
 
@@ -323,6 +463,9 @@ public:
         }
 
       CCsvLog::Row(_Symbol, (sig.direction == DIR_BUY ? "BUY" : "SELL"), entry, plan.sl_price, plan.tp_price, lots, spread_pts, sig.reason, "OK");
+      m_risk.RecordTradeOpened();
+      if(InpDiagSignalLegs)
+         m_diag.RecordExecution(sig.direction);
       if(!InpCooldownAfterLossOnly)
          SetCooldownFromNow();
       m_sm.Set(STATE_IDLE, "done");
@@ -349,6 +492,11 @@ inline void Engine_OnTick()
 inline void Engine_OnTradeTransaction(const MqlTradeTransaction &trans)
   {
    g_engine.OnTradeTransaction(trans);
+  }
+
+inline void Engine_OnTesterEnd()
+  {
+   g_engine.OnTesterEnd();
   }
 
 #endif // AEC_ENGINE_MQH

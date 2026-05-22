@@ -26,8 +26,6 @@ public:
       Shutdown();
       if(!InpLogCsv)
          return true;
-      if(!InpLogCsv)
-         return true;
       const int flags = FILE_WRITE | FILE_READ | FILE_CSV | FILE_ANSI | FILE_SHARE_READ;
       s_handle = FileOpen(InpCsvFileName, flags, ';');
       if(s_handle == INVALID_HANDLE)
