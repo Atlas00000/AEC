@@ -5,3 +5,12 @@
 # OS
 Thumbs.db
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# AI datasets (regenerate via scripts/ai_build_dataset.py)
+data/ai/*.csv
+data/ai/*.json
+!data/ai/.gitkeep

@@ -15,6 +15,8 @@
 #include "../Utils/SignalDiagnostics.mqh"
 #include "../Utils/MaeMfeTracker.mqh"
 #include "../Utils/DealExport.mqh"
+#include "../Utils/SignalFeatureExport.mqh"
+#include "../Models/SignalFeatureMetrics.mqh"
 #include "StateMachine.mqh"
 #include "../Risk/RiskManager.mqh"
 #include "../Risk/PositionSizing.mqh"
@@ -29,6 +31,7 @@
 #include "../Execution/AtrTrailExit.mqh"
 #include "../Signals/SignalEngine.mqh"
 #include "../Signals/HourDirection.mqh"
+#include "../Execution/AiEntryGate.mqh"
 
 class CEngine
   {
@@ -42,6 +45,26 @@ class CEngine
    int              m_blockReason; // 0 none, 1 daily DD, 2 hard equity, 3 min equity
    int              m_blockedDayId;
    bool             m_loggedAtrTrailStub;
+
+   void LogSignalFeatureOutcome(const SignalResult &sig,
+                                 const SignalLegSnapshot &legs,
+                                 const AecSignalFeatureMetrics &metrics,
+                                 const int spread_pts,
+                                 const string outcome,
+                                 const double ai_prob_take = -1.0) const
+     {
+      double prob = ai_prob_take;
+      if(prob < 0.0 && InpUseAiEntryFilter)
+        {
+         const datetime bar_time = iTime(_Symbol, _Period, 1);
+         prob = Aec_AiProbTakeFromBarTime(bar_time, sig.direction);
+        }
+      else if(prob < 0.0)
+         prob = 0.0;
+
+      CSignalFeatureExport::WriteChainPass(_Symbol, _Period, sig.direction, legs, metrics,
+                                           spread_pts, ConsecutiveLossStreak(), outcome, prob);
+     }
 
    void SetCooldownFromNow(const int seconds_override = -1)
      {
@@ -206,6 +229,8 @@ public:
          CLogger::Error("CSV log init failed — continuing without CSV");
       if(InpExportDeals || AecExportMaeMfeActive())
          CDealExport::Reset();
+      if(InpExportSignalFeatures)
+         CSignalFeatureExport::Reset();
       if(InpUseExperimentalAtrTrail && !InpUseAtrTrailAfterR && !m_loggedAtrTrailStub)
         {
          CLogger::Info("InpUseExperimentalAtrTrail is legacy — use InpUseAtrTrailAfterR (EDGE-6.6).");
@@ -216,7 +241,8 @@ public:
                                  InpAllowTrading ? "true" : "false",
                                  InpBlockBuyHourStart, InpBlockBuyHourEnd,
                                  InpDiagSignalLegs ? "on" : "off",
-                                 InpExportDeals ? "on" : "off"));
+                                 InpExportDeals ? "on" : "off",
+                                 InpExportSignalFeatures ? "on" : "off"));
       return true;
      }
 
@@ -228,6 +254,9 @@ public:
          m_diag.WriteCsvSummary();
         }
       CDealExport::ExportOnDeinit(_Symbol, InpMagic);
+      if(InpExportSignalFeatures && CSignalFeatureExport::RowCount() > 0)
+         CLogger::Info(StringFormat("Signal feature export: %I64u rows -> %s",
+                                    CSignalFeatureExport::RowCount(), InpSignalFeatureFile));
       m_sig.Deinit();
       CCsvLog::Shutdown();
       CLogger::Info(StringFormat("AEC deinit reason=%d", reason));
@@ -384,10 +413,31 @@ public:
 
       CLogger::Debug(StringFormat("Signal %s | %s", sig.reason, sig.detail));
 
+      SignalLegSnapshot feat_legs;
+      ZeroMemory(feat_legs);
+      string feat_detail = "";
+      AecSignalFeatureMetrics feat_metrics;
+      AecSignalFeatureMetricsClear(feat_metrics);
+      bool feat_ready = false;
+      const bool log_features = InpExportSignalFeatures;
+      if(log_features)
+        {
+         feat_ready = m_sig.SnapshotLegs(_Symbol, _Period, feat_legs, feat_detail)
+                      && m_sig.FeatureMetrics(_Symbol, _Period, sig.direction, feat_metrics);
+        }
+
       if(InpTradeDirection > 0 && sig.direction != DIR_BUY)
+        {
+         if(log_features && feat_ready)
+            LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "trade_dir");
          return;
+        }
       if(InpTradeDirection < 0 && sig.direction != DIR_SELL)
+        {
+         if(log_features && feat_ready)
+            LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "trade_dir");
          return;
+        }
 
       if(InpUseHourDirectionFilter)
         {
@@ -396,6 +446,25 @@ public:
          if(!Aec_HourDirectionAllows(sig.direction, signal_bar_time, hdir))
            {
             CLogger::Trace(hdir);
+            if(log_features && feat_ready)
+              {
+               const double prob = Aec_AiProbTakeFromBarTime(signal_bar_time, sig.direction);
+               LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "hour_blocked", prob);
+              }
+            return;
+           }
+        }
+
+      if(InpUseAiEntryFilter)
+        {
+         const datetime signal_bar_time = iTime(_Symbol, _Period, 1);
+         string ai_detail = "";
+         const double ai_prob = Aec_AiProbTakeFromBarTime(signal_bar_time, sig.direction);
+         if(!Aec_AiEntryAllows(sig.direction, signal_bar_time, ai_detail))
+           {
+            CLogger::Trace(ai_detail);
+            if(log_features && feat_ready)
+               LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "ai_skip", ai_prob);
             return;
            }
         }
@@ -403,12 +472,16 @@ public:
       if(!CTradeTracker::HasRoomForNew(_Symbol, InpMagic, (int)sig.direction, rsk))
         {
          CLogger::Info(rsk);
+         if(log_features && feat_ready)
+            LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "no_room");
          return;
         }
 
       if(!m_risk.MaxTradesPerDayOk(rsk))
         {
          CLogger::Trace(rsk);
+         if(log_features && feat_ready)
+            LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "max_trades_day");
          return;
         }
 
@@ -416,6 +489,8 @@ public:
       if(!ComputeSlTpPoints(_Symbol, m_sig.AtrHandle(), sl_pts, tp_pts, rsk))
         {
          CLogger::Info(rsk);
+         if(log_features && feat_ready)
+            LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "sltp_fail");
          return;
         }
 
@@ -426,6 +501,8 @@ public:
       if(!CPositionSizing::BuildSltpPlan(_Symbol, otype, entry, sl_pts, tp_pts, plan, rsk))
         {
          CLogger::Info(rsk);
+         if(log_features && feat_ready)
+            LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "sltp_plan_fail");
          return;
         }
 
@@ -438,6 +515,8 @@ public:
       if(lots <= 0.0)
         {
          CLogger::Info(StringFormat("Lot sizing failed: %s", rsz));
+         if(log_features && feat_ready)
+            LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "lot_fail");
          return;
         }
 
@@ -447,6 +526,8 @@ public:
         {
          CLogger::Info(StringFormat("Order validation rejected: %s", vrej));
          CCsvLog::Row(_Symbol, (sig.direction == DIR_BUY ? "BUY" : "SELL"), entry, plan.sl_price, plan.tp_price, lots, spread_pts, sig.reason, StringFormat("REJ:%s", vrej));
+         if(log_features && feat_ready)
+            LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "validation_fail");
          m_sm.Set(STATE_IDLE, "validation fail");
          return;
         }
@@ -458,9 +539,14 @@ public:
         {
          CLogger::Info(StringFormat("Open failed: %s", er));
          CCsvLog::Row(_Symbol, (sig.direction == DIR_BUY ? "BUY" : "SELL"), entry, plan.sl_price, plan.tp_price, lots, spread_pts, sig.reason, StringFormat("FAIL:%s", er));
+         if(log_features && feat_ready)
+            LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "open_fail");
          m_sm.Set(STATE_IDLE, "open fail");
          return;
         }
+
+      if(log_features && feat_ready)
+         LogSignalFeatureOutcome(sig, feat_legs, feat_metrics, spread_pts, "executed");
 
       CCsvLog::Row(_Symbol, (sig.direction == DIR_BUY ? "BUY" : "SELL"), entry, plan.sl_price, plan.tp_price, lots, spread_pts, sig.reason, "OK");
       m_risk.RecordTradeOpened();

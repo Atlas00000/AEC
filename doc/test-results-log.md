@@ -110,6 +110,113 @@ After each backtest completes:
 | T63 | 2026-05-21 | P9-C partial 25% @ 1R (EDGE-6.10) | EURUSD M5 | 2020.01.01–2026.05.19 | **reject** | PF 1.02 · net +154.09 · 2048 trades · lot 0.05 · DD ~50% |
 | T64 | 2026-05-21 | P9-D soft never-green (EDGE-6.11) | EURUSD M5 | 2020.01.01–2026.05.19 | **reject** | PF 0.99 · net −12.53 · 1632 trades · vs T48 −283.83 net |
 | T65 | 2026-05-21 | P9-E BB release 1.12 (EDGE-3.17a) | EURUSD M5 | 2020.01.01–2026.05.19 | **reject** | PF 0.99 · net −16.47 · 1574 trades · vs T48 −287.77 net |
+| T72 | 2026-05-20 | P10-A AI dataset export (EDGE-AI-0) | EURUSD M5 | 2020.01.01–2026.05.19 | **done** | PF 1.17 · net +273.34 · 1249 trades · ≈T48 · `AEC_P10-A_deals.csv` |
+| T70 | 2026-05-20 | P10-B AI skip τ=0.45 (EDGE-AI-4) | EURUSD M5 | 2020.01.01–2026.05.19 | **PASS** | PF 1.19 · net +273.61 · 1144 trades · vs T48 +2.31 net |
+| T71 | 2026-05-20 | P10-C AI skip holdout (EDGE-AI-5) | EURUSD M5 | 2024.01.01–2026.05.19 | **PASS** | PF 1.22 · net +105.61 · 386 trades · vs T51 +12.04 net |
+| T73 | 2026-05-20 | P10-B robustness (extended history) | EURUSD M5 | **2010.01.01**–2026.05.19 | **caution** | PF 0.98 · net −79.93 · 3163 trades · DD ~38% · dep 1000 |
+| T74a | 2026-05-20 | P10-F long range dep 200 (EDGE-AI-8) | EURUSD M5 | 2010–2026 (stopped) | **incomplete** | PF 0.85 · net −199 · 905 trades · wiped ~2014 |
+| T74b | 2026-05-20 | P10-F long range dep 1000 (EDGE-AI-8) | EURUSD M5 | 2010.01.01–2026.05.19 | **done** | PF **0.98** · net **−95.91** · **3180** trades · DD **~39.5%** · no AI · vs T73 |
+| T75 | — | P11-A regime gate (EDGE-AI-8) | EURUSD M5 | 2010+ and 2020+ | **pending** | P10-B + ATR 20–85 + ADX≥18 · preset ready |
+
+---
+
+## T74 result notes (2026-05-20) — P5-F long range, no AI
+
+### T74b — **done** (full 2010–2026, dep 1000)
+
+**Verdict: answers the era question — pre-2020 stack drag; AI is not the main T73 story.**
+
+| Metric | T74b P5-F (no AI) | T73 P10-B (+ AI) | T70 / T48 (2020+ only) |
+|--------|-------------------|------------------|-------------------------|
+| Net (full) | **−95.91** | **−79.93** | +273 / +271 |
+| PF (full) | **0.98** | **0.98** | **1.19** / 1.17 |
+| Trades | **3180** | 3163 | 1144 / 1244 |
+| Max DD | **~39.5%** | ~38% | ~14% / ~24% |
+
+**Era buckets (T74b deals replay):**
+
+| Era | Trades | Net | PF |
+|-----|-------:|----:|---:|
+| **pre2020** | 2034 | **−371.63** | **0.87** |
+| **2020+** | 1146 | **+275.72** | **1.19** |
+| holdout 2024+ | 389 | +105.64 | 1.22 |
+
+**Worst years:** **2010** (−67), **2015** (−55), **2016** (−104, PF 0.67). **2022–2025** profitable (PF 1.30–1.35).
+
+**Conclusions:**
+
+1. **P5-F alone** on 2010–2026 ≈ **T73** (same PF 0.98, similar trade count) — extended-history loss is **regime / era**, not the AI skip gate.
+2. **2020+ window** on stack-only matches **T70** (PF **1.19**, net **+276**, 1146 trades) — validates **2020+ production lock**.
+3. **T74a** (dep 200) remains **invalid** for full-range; account depleted ~2014.
+
+Archive: `data/ai/AEC_P10-F_T74b_deals.csv` · [edge-ai-8-4-regime-readout.md](./edge-ai-8-4-regime-readout.md)
+
+**Next:** **T75** (P11-A regime gate) — long 2010–2026 + short 2020–2026.
+
+---
+
+## T74 / T75 — EDGE-AI-8 regime
+
+Presets: **`AEC.P10-F_p5f-long-range_EDGE-AI-8-T74.set`** · **`AEC.P11-A_regime-gate_EDGE-AI-8-T75.set`**  
+Runbook: [edge-ai-8-runbook.md](./edge-ai-8-runbook.md) · Checklist: [edge-ai-8-t74-t75-checklist.md](./edge-ai-8-t74-t75-checklist.md)
+
+---
+
+## T70 / T71 result notes (2026-05-20) — EDGE-AI-4 / AI-5
+
+**Verdict: PASS (candidate promote)** — full-range and holdout **beat** P5-F references; equity DD **lower** than T48/T51.
+
+| Metric | T48 P5-F | T70 P10-B AI | Δ |
+|--------|----------|--------------|---|
+| Net | +271.30 | **+273.61** | **+2.31** |
+| PF | 1.17 | **1.19** | +0.02 |
+| Trades | 1244 | 1144 | −100 (~8% skip) |
+| WR% | 37.14 | 37.50 | +0.36pp |
+| Equity DD | ~24% | **~14%** | much lower |
+
+| Metric | T51 P5-F | T71 P10-C AI | Δ |
+|--------|----------|--------------|---|
+| Net | +93.57 | **+105.61** | **+12.04** |
+| PF | 1.18 | **1.22** | +0.04 |
+| Trades | 419 | 386 | −33 |
+| WR% | 37.23 | 38.08 | +0.85pp |
+| Equity DD | ~16% | **~16%** | ~flat |
+
+**Gate check (aiimplmentation.md):** PF ≥ 1.17 · net > T48 · holdout PF ≥ 1.05 · net > 0 · **not worse than T51** — all **PASS**.
+
+**Offline vs tester:** T70 trades **1144** vs replay **1117** (+2.4%); T71 **386** vs **378** (+2.1%) — aligned.
+
+**Production:** **P10-B** promoted (EDGE-AI-6) · `Inputs.mqh` + [edge-8-3-production-lock.md](./edge-8-3-production-lock.md).
+
+**Phase AI-4/5/6:** **complete** · **Next:** demo forward (AI-7 deferred) or AI-3 features if retrain.
+
+---
+
+## T73 result notes (2026-05-20) — extended-history robustness
+
+**Purpose:** Check overfitting / regime dependence outside the **2020–2026** validation window.
+
+**Setup (from report):** Presumed **P10-B** (production) · EURUSD M5 · deposit **1000** · **2010.01.01 – 2026.05.19** · 100% history quality.
+
+| Metric | T73 (2010–2026) | T70 (2020–2026) | Note |
+|--------|-----------------|-----------------|------|
+| Net | **−79.93** | +273.61 | Edge concentrated in recent years |
+| PF | **0.98** | 1.19 | Below 1.0 over full sample |
+| Trades | 3163 | 1144 | ~2× history length, ~2.8× trades |
+| WR% | 33.10 | 37.50 | Lower in older regimes |
+| Equity DD | ~38% | ~14% | Much harsher on long sample |
+
+**Verdict: caution (not a production revert by itself)**
+
+- **Does not invalidate** T70/T71 within the **locked research window** (2020–2026 train/holdout still passed).
+- **Does warn** the stack (and especially the **AI gate**, trained only on 2020–2026 deals) may be **regime-specific**; 2010–2019 likely drags aggregate PF below 1.
+- **Not apples-to-apples** vs T70: deposit **1000** vs **200**; confirm preset was **P10-B** and lot **0.01**.
+
+**Recommended follow-ups (optional):**
+
+1. Same window **2010–2026** with **P5-F** (no AI) — separates “signal stack” vs “AI + recent training”.
+2. Split reports: **2010–2019** vs **2020–2026** on one preset — locates where PF breaks.
+3. Keep **live/demo scope** aligned with validation: treat **2020+** as the supported deployment era unless a future EDGE re-validates 2010+.
 
 ---
 

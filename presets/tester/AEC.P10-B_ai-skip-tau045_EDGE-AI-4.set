@@ -1,13 +1,14 @@
-; AEC | P8-WF-2023 | EDGE-8.2 optional yearly walk-forward
-; Tester dates: 2023.01.01 – 2023.12.31
-; Stack: P5-F · EURUSD M5 · deposit 200
+; AEC | P10-B | EDGE-AI-4 skip gate — P5-F + logistic tau=0.45 (T70 full range)
+; Use: EURUSD M5 · deposit 200 · lot 0.01 · dates 2020.01.01 – 2026.05.19 (Tester UI)
+; Offline target: ~1117 trades · net ~+275 · PF ~1.19 vs T48
+; Compare: T48 P5-F (no AI) · enable LogLevel=2 to see AI skip traces
 ;
 InpAllowTrading=true||false||0||true||N
 InpForceTestSignal=false||false||0||true||N
 InpForceTestDirection=1||1||-1||1||N
 InpLogLevel=1||0||0||3||N
 InpLogCsv=false||false||0||true||N
-InpCsvFileName=AEC_P8-WF_2023_decisions.csv
+InpCsvFileName=AEC_P10-B_decisions.csv
 InpMagic=260513001||260513001||1||2605130010||N
 InpMaxSpreadPoints=50||50||1||500||N
 InpUseSignalSpreadCap=false||false||0||true||N
@@ -28,6 +29,12 @@ InpAtrSlMultiplier=1.5||1.5||0.150000||15.000000||N
 InpRiskReward=2.0||2.0||0.200000||20.000000||N
 InpUseRrForTp=true||false||0||true||N
 InpUseExperimentalAtrTrail=false||false||0||true||N
+InpUseDeadTradeExit=false||false||0||true||N
+InpUseBreakevenAtR=false||false||0||true||N
+InpUsePartialCloseAtR=false||false||0||true||N
+InpUseAtrTrailAfterR=false||false||0||true||N
+InpUseGiveBackCap=false||false||0||true||N
+InpUseSoftNeverGreenExit=false||false||0||true||N
 InpMaxSlippagePoints=30||30||1||300||N
 InpMaxOrderRetries=2||2||1||20||N
 InpMaxOpenTrades=1||1||1||10||N
@@ -104,9 +111,11 @@ InpUsePriorBarRangeCap=true||false||0||true||N
 InpMaxPriorBarRangeAtrMult=2.0||2.0||1.000000||4.000000||N
 InpDiagSignalLegs=false||false||0||true||N
 InpDiagWriteSummaryCsv=false||false||0||true||N
-InpDiagSummaryFile=AEC_P8-WF_2023_diag_summary.csv
-InpExportDeals=true||false||0||true||N
-InpDealExportFile=AEC_P8-WF_2023_deals.csv
-InpDealSegmentFile=AEC_P8-WF_2023_segments.csv
-InpExportMaeMfe=true||false||0||true||N
-InpMaeMfeBucketFile=AEC_P8-WF_2023_mae_mfe_buckets.csv
+InpDiagSummaryFile=AEC_P10-B_diag_summary.csv
+InpUseAiEntryFilter=true||false||0||true||N
+InpAiMinProbTake=0.45||0.45||0.350000||0.650000||N
+InpExportDeals=false||false||0||true||N
+InpDealExportFile=AEC_P10-B_deals.csv
+InpDealSegmentFile=AEC_P10-B_segments.csv
+InpExportMaeMfe=false||false||0||true||N
+InpMaeMfeBucketFile=AEC_P10-B_mae_mfe_buckets.csv

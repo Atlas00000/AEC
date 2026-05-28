@@ -2,7 +2,7 @@
 
 
 
-**Status:** **Phase 8 complete** · production **`AEC.P5-F`** (T48) locked · **Phase 9** = bucket-driven improvements (next).
+**Status:** **Phase 8–9 complete** · production **`AEC.P10-B`** (T70/T71) · **T73** extended 2010–2026 = **caution** (PF 0.98) · validated scope **2020+**.
 
 **Problem (post–Phase 2):** Thin edge (PF ~1.01, WR ~34% vs breakeven ~33.5%). Enough winners; **~66% losers** at ~2:1 R:R erode gains. Focus: **entry quality**, **regime**, **failure containment**, then **exits** — one ID → one backtest vs **P2-C**.
 
@@ -243,7 +243,7 @@
 |----|------|--------|-------|
 | **EDGE-8.1** | Train/holdout split | **done (PASS)** | [edge-8-1-runbook.md](./edge-8-1-runbook.md) · **T50** · **T51** |
 | **EDGE-8.2** | Calendar-year walk-forward | **done (PASS)** | [edge-8-2-runbook.md](./edge-8-2-runbook.md) · `wf_8_2_summarize.py` · **6/7** years net > 0 |
-| **EDGE-8.3** | Production lock | **done** | [edge-8-3-production-lock.md](./edge-8-3-production-lock.md) · preset **P5-F** |
+| **EDGE-8.3** | Production lock (P5-F) | **done** | superseded by **EDGE-AI-4** · [edge-8-3-production-lock.md](./edge-8-3-production-lock.md) · **P10-B** |
 
 **8.1:** Holdout PF **1.18** · net **+93.57** · 419 trades. **8.2:** 2020 flat (−0.17); 2021–2026 all positive.
 
@@ -587,11 +587,11 @@ Verdict: EDGE-3.4 **keep** — replaces 0.15 struct layer in P3-C
 
 ## Current focus
 
-**Production:** **P5-F** (T48) — P5-E + **block BUY [14,15)** · preset **`AEC.P5-F_block-buy-hours-1415_EDGE-5-6.set`** · PF **1.17** · net **+271.30** · 1244 trades · DD **~24%**.
+**Production:** **P10-B** (T70/T71) — P5-F + **AI skip τ=0.45** · **`AEC.P10-B_ai-skip-tau045_EDGE-AI-4.set`** · T73 (2010–2026) = **regime caution**.
 
-**Phase 7:** **complete** (7.1–7.3 · T49 buckets via script).
+**Phase 8–9:** **complete** · no Phase 9 promote.
 
-**Phase 8:** **complete**. **Phase 9:** **closed** — no promote · **P5-F** locked · forward **EDGE-9.x** deferred.
+**Phase 11 (AI):** **AI-4/5/6 done** · **next AI-3 + AI-8** — [aiimplmentation.md](./aiimplmentation.md) · [edge-ai-4-runbook.md](./edge-ai-4-runbook.md)
 
 **Diagnostics:** `python scripts/p7d_mae_mfe_postprocess.py` after any test that writes `AEC_P7-D_deals.csv` (or per-preset deal file).
 

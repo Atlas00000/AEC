@@ -8,7 +8,8 @@ Load **one preset per backtest**. Archive outputs before loading the next preset
 
 **Workflow:** [doc/test-results-log.md](../doc/test-results-log.md)  
 
-**Folder:** `MQL5/Experts/AEC/presets/tester/`
+**Source of truth:** `MQL5/Experts/AEC/presets/tester/`  
+**Strategy Tester Load dropdown:** `MQL5/Profiles/Tester/` — run sync (below), do not copy by hand.
 
 
 
@@ -16,17 +17,27 @@ Load **one preset per backtest**. Archive outputs before loading the next preset
 
 
 
-## Production (live backtests)
+## Production (live / chart preset)
+
+| Preset | Test | Notes |
+|--------|------|-------|
+| **`AEC.P10-B_ai-skip-tau045_EDGE-AI-4.set`** | **T70** | **Production (EDGE-AI-4)** · P5-F + AI skip τ=0.45 · see `doc/edge-8-3-production-lock.md` |
+| **`AEC.P10-F_p5f-long-range_EDGE-AI-8-T74.set`** | **T74** | P5-F · 2010–2026 · no AI · era baseline · [edge-ai-8-runbook.md](../doc/edge-ai-8-runbook.md) |
+| **`AEC.P11-A_regime-gate_EDGE-AI-8-T75.set`** | **T75** | P10-B + ATR pct + ADX · regime gate test |
+| `AEC.P5-F_block-buy-hours-1415_EDGE-5-6.set` | **T48** | Prior production (baseline, no AI) |
+
+## OOS / research backtests
 
 | Preset | Test | Notes |
 |--------|------|-------|
 | **`AEC.P8-A_oos-train_EDGE-8-1.set`** | **T50** | **OOS train** 2020–2023 (EDGE-8.1) |
-| **`AEC.P8-B_oos-holdout_EDGE-8-1.set`** | **T51** | **OOS holdout** 2024–2026 (EDGE-8.1 verdict) |
-| **`AEC.P9-A_block-hour-16_EDGE-5-7.set`** | **T59** | **Phase 9** · P5-F + exclude hour **16** (EDGE-5.7) |
-| **`AEC.P5-F_block-buy-hours-1415_EDGE-5-6.set`** | **T48** | **Production (locked 8.3)** · see `doc/edge-8-3-production-lock.md` |
+| **`AEC.P8-B_oos-holdout_EDGE-8-1.set`** | **T51** | **OOS holdout** 2024–2026 (P5-F, no AI) |
+| **`AEC.P10-C_ai-skip-holdout_EDGE-AI-4.set`** | **T71** | Holdout with AI gate (vs T51) |
+| **`AEC.P9-A_block-hour-16_EDGE-5-7.set`** | **T59** | Phase 9 · P5-F + exclude hour **16** (reject) |
 | `AEC.P8-WF-YYYY_EDGE-8-2.set` | optional | Per-year WF (strict); not required after 8.2 script PASS |
 | `AEC.P5-E_post-streak-4loss-45min_EDGE-5-5.set` | **T36** | Prior production (superseded by T48) |
 | `AEC.P7-D_mae-mfe-export_EDGE-7-3.set` | **T49** | Research: P5-F + deal/MAE/MFE export (EDGE-7.3) |
+| **`AEC.P10-A_ai-dataset-full_EDGE-AI-0.set`** | **T72** | **AI-0 export** · P5-F + `AEC_P10-A_deals.csv` (EDGE-AI-0) |
 
 Compare new layers vs **P5-E** (not P4-E). Baselines: **P4-E** (T43) · **P4-D** (T42) · **P3-F** (T13).
 
@@ -151,17 +162,14 @@ When adding Phase 2+ presets, assign the next **Txx** ID in test-results-log.
 
 
 
-## Optional: MT5 Profiles mirror
-
-
-
-After adding a preset, copy it to `MQL5/Profiles/Tester/` (Strategy Tester dropdown reads that folder):
+## Sync presets into Strategy Tester (required once per session / after git pull)
 
 ```powershell
-Copy-Item "...\Experts\AEC\presets\tester\AEC.P4-D_prior-bar-range-cap-2atr_EDGE-4-4.set" `
-  "...\MQL5\Profiles\Tester\" -Force
+cd MQL5\Experts\AEC
+.\scripts\sync_tester_presets.ps1
 ```
 
-**Source of truth:** `presets/tester/` in this repo.
+Copies all `AEC*.set` from `presets/tester/` → `MQL5/Profiles/Tester/` (only changed files).  
+**T74 / T75 checklist:** [doc/edge-ai-8-t74-t75-checklist.md](../doc/edge-ai-8-t74-t75-checklist.md)
 
 

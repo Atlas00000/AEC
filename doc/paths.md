@@ -37,7 +37,9 @@ C:\Users\emili\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF
 | Item | Relative path |
 |------|----------------|
 | Main EA | `AEC.mq5` |
-| Presets | `presets\tester\` |
+| Presets (repo) | `presets\tester\` |
+| Presets (Tester Load UI) | `%AppData%\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075\MQL5\Profiles\Tester\` |
+| Sync repo → Tester | `.\scripts\sync_tester_presets.ps1` from `Experts\AEC` |
 | Docs | `doc\` |
 | Archive test results | `doc\data\T01\`, `T02\`, … |
 

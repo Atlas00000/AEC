@@ -233,6 +233,26 @@
       "path":"Execution\\AtrTrailExit.mqh",
       "compile":false,
       "relative_to_project":true
+    },
+    {
+      "path":"Execution\\AiEntryGate.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Models\\SignalFeatureMetrics.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Signals\\SignalFeatureCalc.mqh",
+      "compile":false,
+      "relative_to_project":true
+    },
+    {
+      "path":"Utils\\SignalFeatureExport.mqh",
+      "compile":false,
+      "relative_to_project":true
     }
   ]
 }

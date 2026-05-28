@@ -1,8 +1,8 @@
 //+------------------------------------------------------------------+
-//| Inputs.mqh — compile defaults = production P5-F (T48)             |
-//| Preset: presets/tester/AEC.P5-F_block-buy-hours-1415_EDGE-5-6.set |
-//| Stack: hours 8–17 · BB 1.10 · struct 0.20 · chop 1.0 · prior 2.0 |
-//|        post-streak 4×45m · BUY block [14,15) · SL200 TP400 RR2.0   |
+//| Inputs.mqh — compile defaults = production P10-B (T70 / EDGE-AI-4) |
+//| Preset: presets/tester/AEC.P10-B_ai-skip-tau045_EDGE-AI-4.set      |
+//| Stack: P5-F + AI skip gate τ=0.45 (logistic L3_take)               |
+//|        hours 8–17 · BB 1.10 · struct 0.20 · BUY block [14,15)      |
 //| InpAllowTrading=false on attach (safety); preset sets true in tester|
 //+------------------------------------------------------------------+
 #ifndef AEC_INPUTS_MQH
@@ -15,7 +15,7 @@ input bool   InpForceTestSignal = false;           // Tester only: bypass signal
 input int    InpForceTestDirection = 1;            // If force: 1=BUY, -1=SELL
 input ENUM_LOG_LEVEL InpLogLevel = LOG_INFO;       // Log verbosity
 input bool   InpLogCsv = false;                    // Optional CSV decision log
-input string InpCsvFileName = "AEC_P5-F_decisions.csv";
+input string InpCsvFileName = "AEC_P10-B_decisions.csv";
 
 input group "Symbol & history"
 input long   InpMagic = 260513001;                 // Magic number
@@ -160,6 +160,15 @@ input group "Phase 0 diagnostics"
 input bool   InpDiagSignalLegs = false;            // Count per-leg pass rates (EDGE-0.1; on for research)
 input bool   InpDiagWriteSummaryCsv = false;       // Write leg summary CSV on deinit (tester/files)
 input string InpDiagSummaryFile = "AEC_diag_summary.csv";
+
+input group "Phase AI signal features (EDGE-AI-3.1)"
+input bool   InpExportSignalFeatures = false;        // Export signal-bar features on chain pass
+input string InpSignalFeatureFile = "AEC_signal_features.csv"; // Tester Files output
+input bool   InpExportSignalFeaturesShadow = true;   // Log non-executed outcomes (ai_skip, etc.)
+
+input group "Phase AI entry gate (EDGE-AI-4 production)"
+input bool   InpUseAiEntryFilter = true;           // Skip entry if P(L3_take) < threshold (T70/T71)
+input double InpAiMinProbTake = 0.45;            // Min P(take) to allow entry (offline + tester tau)
 
 input group "Phase 7 deal export (EDGE-7.1)"
 input bool   InpExportDeals = false;               // Export closed deals + PF segments on deinit

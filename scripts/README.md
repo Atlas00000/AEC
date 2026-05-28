@@ -1,5 +1,18 @@
 # AEC scripts
 
+## Sync tester presets (Strategy Tester Load dropdown)
+
+MT5 reads `.set` files from `MQL5/Profiles/Tester/`, not from `Experts/AEC/presets/tester/`.
+
+```powershell
+cd MQL5\Experts\AEC
+.\scripts\sync_tester_presets.ps1
+```
+
+Run after **git pull** or when a new preset was added. See [presets/README.md](../presets/README.md).
+
+---
+
 ## EDGE-7.3 — MAE/MFE without rerunning Strategy Tester
 
 After a P7-D backtest, you already have `AEC_P7-D_deals.csv` and segments. To add **`mfe_r` / `mae_r`** and **`AEC_P7-D_mae_mfe_buckets.csv`** in ~1–2 minutes:
@@ -51,3 +64,14 @@ python scripts/edge_7_4_never_green_by_hour.py
 ```
 
 See [doc/edge-7-4-runbook.md](../doc/edge-7-4-runbook.md). Output: `AEC_edge_7_4_never_green_by_hour.csv`.
+
+## EDGE-AI-0 / 1 / 2 — ML skip model (offline)
+
+```bash
+pip install -r requirements-ai.txt
+python scripts/ai_build_dataset.py
+python scripts/ai_train_skip_model.py
+python scripts/ai_simulate_thresholds.py
+```
+
+See [doc/edge-ai-0-runbook.md](../doc/edge-ai-0-runbook.md) and [doc/aiimplmentation.md](../doc/aiimplmentation.md).

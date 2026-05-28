@@ -108,5 +108,5 @@ InpDiagSummaryFile=AEC_P8-WF_2021_diag_summary.csv
 InpExportDeals=true||false||0||true||N
 InpDealExportFile=AEC_P8-WF_2021_deals.csv
 InpDealSegmentFile=AEC_P8-WF_2021_segments.csv
-InpExportMaeMfe=false||false||0||true||N
+InpExportMaeMfe=true||false||0||true||N
 InpMaeMfeBucketFile=AEC_P8-WF_2021_mae_mfe_buckets.csv

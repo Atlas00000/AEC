@@ -4,7 +4,10 @@
 |------|---------|
 | [concept.md](./concept.md) | System concept, Phase 1 scope, gap answers, architecture |
 | [roadmap.md](./roadmap.md) | Phase 1 build roadmap (execution engine — complete) |
-| [edge-discovery.md](./edge-discovery.md) | Phased edge isolation tasks with IDs (active work) |
+| [edge-discovery.md](./edge-discovery.md) | Phased edge isolation tasks with IDs (rule-based EDGE history) |
+| [aiimplmentation.md](./aiimplmentation.md) | **AI entry-filter roadmap** (EDGE-AI-0 … AI-7) |
+| [edge-ai-0-runbook.md](./edge-ai-0-runbook.md) | Run AI-0/1/2 Python pipeline |
+| [ai-data-schema.md](./ai-data-schema.md) | ML dataset columns |
 | [phase0-runbook.md](./phase0-runbook.md) | Phase 0 tester steps (EDGE-0.1–0.4) |
 | [../presets/README.md](../presets/README.md) | Named `.set` files — one per test |
 | [test-results-log.md](./test-results-log.md) | **One test at a time** — sequence, archive, run log |

@@ -16,6 +16,7 @@
 #include "HtfTrend.mqh"
 #include "AdxRegime.mqh"
 #include "AtrRegime.mqh"
+#include "SignalFeatureCalc.mqh"
 
 class CSignalEngine
   {
@@ -233,6 +234,16 @@ public:
      }
 
    int AtrHandle() const { return m_hAtr; }
+   int BandsHandle() const { return m_hBands; }
+   int AdxHandle() const { return m_hAdx; }
+
+   bool FeatureMetrics(const string sym,
+                       const ENUM_TIMEFRAMES tf,
+                       const ENUM_TRADE_DIR dir,
+                       AecSignalFeatureMetrics &metrics) const
+     {
+      return AecSignalFeature_Collect(sym, tf, dir, m_hBands, m_hAtr, m_hAdx, metrics);
+     }
 
    int MinBarsRequired() const
      {

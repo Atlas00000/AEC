@@ -14,6 +14,8 @@ inline bool SigBb_ShiftCompressed(const double &widths[],
   {
    const int from = shift;
    const int to = shift + squeezeLookback - 1;
+   if(to >= ArraySize(widths) || from < 1)
+      return false;
    double avg = 0.0;
    for(int k = from; k <= to; ++k)
       avg += widths[k];
